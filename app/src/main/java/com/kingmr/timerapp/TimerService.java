@@ -19,6 +19,7 @@ import android.os.Vibrator;
 import android.os.VibrationEffect;
 import android.util.Log;
 
+import android.content.pm.ServiceInfo;
 import androidx.core.app.NotificationCompat;
 
 public class TimerService extends Service {
@@ -119,7 +120,11 @@ public class TimerService extends Service {
         }.start();
 
         // Start Foreground immediately
-        startForeground(NOTIFICATION_ID, buildNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        }
 
         if (sListener != null) {
             sListener.onStatusChanged(true);
@@ -238,13 +243,13 @@ public class TimerService extends Service {
         );
 
         // Action intents for buttons
-        Intent stopIntent = new Intent(this, TimerReceiver.class).setAction(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+        Intent stopIntent = new Intent(this, TimerService.class).setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(
                 this, 1, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        Intent restartIntent = new Intent(this, TimerReceiver.class).setAction(ACTION_RESTART);
-        PendingIntent restartPendingIntent = PendingIntent.getBroadcast(
+        Intent restartIntent = new Intent(this, TimerService.class).setAction(ACTION_RESTART);
+        PendingIntent restartPendingIntent = PendingIntent.getService(
                 this, 2, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
@@ -271,8 +276,8 @@ public class TimerService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        Intent stopIntent = new Intent(this, TimerReceiver.class).setAction(ACTION_STOP);
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(
+        Intent stopIntent = new Intent(this, TimerService.class).setAction(ACTION_STOP);
+        PendingIntent stopPendingIntent = PendingIntent.getService(
                 this, 1, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
