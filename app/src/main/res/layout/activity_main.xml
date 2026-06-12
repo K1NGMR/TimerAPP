@@ -1,410 +1,410 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true"
     android:background="@color/bg_dark"
-    android:padding="24dp"
-    tools:context=".MainActivity"
-    android:animateLayoutChanges="true">
+    tools:context=".MainActivity">
 
-    <!-- Top App Bar / Title -->
-    <TextView
-        android:id="@+id/appTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="AURA TIMER"
-        android:textColor="@color/text_primary"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.1"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Circular Progress Timer Section -->
-    <FrameLayout
-        android:id="@+id/timerContainer"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
-        android:layout_marginTop="32dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/appTitle">
-
-        <!-- Track / Circular Glow background (subtle glow) -->
-        <View
-            android:layout_width="260dp"
-            android:layout_height="260dp"
-            android:layout_gravity="center"
-            android:background="@drawable/preset_chip"
-            android:alpha="0.2"/>
-
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/timerProgress"
-            android:layout_width="260dp"
-            android:layout_height="260dp"
-            android:layout_gravity="center"
-            app:indicatorSize="260dp"
-            app:trackThickness="12dp"
-            app:trackColor="#1AFFFFFF"
-            app:indicatorColor="@color/primary"
-            app:trackCornerRadius="6dp"
-            android:progress="100" />
-
-        <!-- Timer Values Center Text -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/textTimeLeft"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="00:00"
-                android:textColor="@color/text_primary"
-                android:textSize="44sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/textTimerState"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="READY"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:letterSpacing="0.1"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp" />
-        </LinearLayout>
-    </FrameLayout>
-
-    <!-- Custom Time Picker Section (Hidden when timer is running) -->
     <LinearLayout
-        android:id="@+id/pickerContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:background="@drawable/card_background"
-        android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@id/timerContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_weight="1">
-            <EditText
-                android:id="@+id/editHours"
-                android:layout_width="60dp"
-                android:layout_height="48dp"
-                android:background="@drawable/preset_chip"
-                android:gravity="center"
-                android:inputType="number"
-                android:maxLength="2"
-                android:text="00"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="HOURS"
-                android:textSize="10sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=":"
-            android:textColor="@color/text_secondary"
-            android:textSize="24sp"
-            android:layout_marginBottom="16dp"/>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_weight="1">
-            <EditText
-                android:id="@+id/editMinutes"
-                android:layout_width="60dp"
-                android:layout_height="48dp"
-                android:background="@drawable/preset_chip"
-                android:gravity="center"
-                android:inputType="number"
-                android:maxLength="2"
-                android:text="05"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="MINUTES"
-                android:textSize="10sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=":"
-            android:textColor="@color/text_secondary"
-            android:textSize="24sp"
-            android:layout_marginBottom="16dp"/>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:layout_weight="1">
-            <EditText
-                android:id="@+id/editSeconds"
-                android:layout_width="60dp"
-                android:layout_height="48dp"
-                android:background="@drawable/preset_chip"
-                android:gravity="center"
-                android:inputType="number"
-                android:maxLength="2"
-                android:text="00"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SECONDS"
-                android:textSize="10sp"
-                android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- Presets Section (Hidden when timer is running) -->
-    <LinearLayout
-        android:id="@+id/presetsContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
         android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@id/pickerContainer">
+        android:padding="24dp"
+        android:gravity="center_horizontal"
+        android:animateLayoutChanges="true">
 
+        <!-- Top App Bar / Title -->
         <TextView
+            android:id="@+id/appTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="QUICK PRESETS"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:letterSpacing="0.1"
+            android:layout_marginTop="8dp"
+            android:text="AURA TIMER"
+            android:textColor="@color/text_primary"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:layout_marginBottom="10dp" />
+            android:letterSpacing="0.1" />
 
-        <HorizontalScrollView
+        <!-- Circular Progress Timer Section -->
+        <FrameLayout
+            android:id="@+id/timerContainer"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:layout_marginTop="24dp">
+
+            <!-- Track / Circular Glow background (subtle glow) -->
+            <View
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_gravity="center"
+                android:background="@drawable/preset_chip"
+                android:alpha="0.2"/>
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/timerProgress"
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_gravity="center"
+                app:indicatorSize="260dp"
+                app:trackThickness="12dp"
+                app:trackColor="#1AFFFFFF"
+                app:indicatorColor="@color/primary"
+                app:trackCornerRadius="6dp"
+                android:progress="100" />
+
+            <!-- Timer Values Center Text -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textTimeLeft"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@color/text_primary"
+                    android:textSize="44sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/textTimerState"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="READY"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:letterSpacing="0.1"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Custom Time Picker Section (Hidden when timer is running) -->
+        <LinearLayout
+            android:id="@+id/pickerContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none">
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:background="@drawable/card_background"
+            android:padding="16dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnPreset1"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_weight="1">
+                <EditText
+                    android:id="@+id/editHours"
+                    android:layout_width="60dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/preset_chip"
+                    android:gravity="center"
+                    android:inputType="number"
+                    android:maxLength="2"
+                    android:text="00"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="1 Min"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="8dp"
-                    app:backgroundTint="@null"/>
-
-                <Button
-                    android:id="@+id/btnPreset5"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="5 Min"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="8dp"
-                    app:backgroundTint="@null"/>
-
-                <Button
-                    android:id="@+id/btnPreset10"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="10 Min"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="8dp"
-                    app:backgroundTint="@null"/>
-
-                <Button
-                    android:id="@+id/btnPreset15"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="15 Min"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="8dp"
-                    app:backgroundTint="@null"/>
-
-                <Button
-                    android:id="@+id/btnPreset30"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="30 Min"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginEnd="8dp"
-                    app:backgroundTint="@null"/>
-
-                <Button
-                    android:id="@+id/btnPreset60"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/preset_chip"
-                    android:text="1 Hour"
-                    android:textColor="@color/text_primary"
-                    app:backgroundTint="@null"/>
+                    android:text="HOURS"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="4dp"/>
             </LinearLayout>
-        </HorizontalScrollView>
-    </LinearLayout>
-
-    <!-- Alarm Sound Section -->
-    <LinearLayout
-        android:id="@+id/soundContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@id/presetsContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ALARM SOUND"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:letterSpacing="0.1"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/card_background"
-            android:padding="12dp">
 
             <TextView
-                android:id="@+id/textSoundName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=":"
+                android:textColor="@color/text_secondary"
+                android:textSize="24sp"
+                android:layout_marginBottom="16dp"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_weight="1">
+                <EditText
+                    android:id="@+id/editMinutes"
+                    android:layout_width="60dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/preset_chip"
+                    android:gravity="center"
+                    android:inputType="number"
+                    android:maxLength="2"
+                    android:text="05"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MINUTES"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=":"
+                android:textColor="@color/text_secondary"
+                android:textSize="24sp"
+                android:layout_marginBottom="16dp"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_weight="1">
+                <EditText
+                    android:id="@+id/editSeconds"
+                    android:layout_width="60dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/preset_chip"
+                    android:gravity="center"
+                    android:inputType="number"
+                    android:maxLength="2"
+                    android:text="00"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SECONDS"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Presets Section (Hidden when timer is running) -->
+        <LinearLayout
+            android:id="@+id/presetsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="QUICK PRESETS"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnPreset1"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="1 Min"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="8dp"
+                        app:backgroundTint="@null"/>
+
+                    <Button
+                        android:id="@+id/btnPreset5"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="5 Min"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="8dp"
+                        app:backgroundTint="@null"/>
+
+                    <Button
+                        android:id="@+id/btnPreset10"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="10 Min"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="8dp"
+                        app:backgroundTint="@null"/>
+
+                    <Button
+                        android:id="@+id/btnPreset15"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="15 Min"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="8dp"
+                        app:backgroundTint="@null"/>
+
+                    <Button
+                        android:id="@+id/btnPreset30"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="30 Min"
+                        android:textColor="@color/text_primary"
+                        android:layout_marginEnd="8dp"
+                        app:backgroundTint="@null"/>
+
+                    <Button
+                        android:id="@+id/btnPreset60"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/preset_chip"
+                        android:text="1 Hour"
+                        android:textColor="@color/text_primary"
+                        app:backgroundTint="@null"/>
+                </LinearLayout>
+            </HorizontalScrollView>
+        </LinearLayout>
+
+        <!-- Alarm Sound Section (Hidden when timer is running) -->
+        <LinearLayout
+            android:id="@+id/soundContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ALARM SOUND"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/card_background"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/textSoundName"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Default Ringtone"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:layout_marginEnd="8dp"/>
+
+                <Button
+                    android:id="@+id/btnSelectSound"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="SELECT"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/preset_chip"
+                    android:layout_marginEnd="4dp"
+                    app:backgroundTint="@null"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Spacer Spring to push button controls to bottom on tall screens -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="24dp" />
+
+        <!-- Control Actions Button Area -->
+        <LinearLayout
+            android:id="@+id/actionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:animateLayoutChanges="true">
+
+            <!-- Reset Button -->
+            <Button
+                android:id="@+id/btnReset"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="0dp"
                 android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Default Ringtone"
-                android:textColor="@color/text_primary"
-                android:textSize="13sp"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:layout_marginEnd="8dp"/>
-
-            <Button
-                android:id="@+id/btnSelectSound"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="SELECT"
-                android:textColor="@color/accent_blue"
-                android:textSize="11sp"
-                android:textStyle="bold"
+                android:layout_height="56dp"
                 android:background="@drawable/preset_chip"
-                android:layout_marginEnd="4dp"
-                app:backgroundTint="@null"/>
+                android:text="RESET"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"
+                app:backgroundTint="@null" />
+
+            <!-- Start/Stop Primary Action Button -->
+            <Button
+                android:id="@+id/btnPrimaryAction"
+                android:layout_width="0dp"
+                android:layout_weight="1.6"
+                android:layout_height="56dp"
+                android:background="@drawable/btn_gradient"
+                android:text="START"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                app:backgroundTint="@null" />
+
+            <!-- Restart Button (visible when running) -->
+            <Button
+                android:id="@+id/btnRestart"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="56dp"
+                android:background="@drawable/preset_chip"
+                android:text="RESTART"
+                android:textColor="@color/accent_blue"
+                android:textStyle="bold"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"
+                app:backgroundTint="@null" />
         </LinearLayout>
+
     </LinearLayout>
-
-    <!-- Control Actions Button Area -->
-    <LinearLayout
-        android:id="@+id/actionsContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:animateLayoutChanges="true"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <!-- Reset Button -->
-        <Button
-            android:id="@+id/btnReset"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="56dp"
-            android:background="@drawable/preset_chip"
-            android:text="RESET"
-            android:textColor="@color/text_secondary"
-            android:textStyle="bold"
-            android:layout_marginEnd="8dp"
-            android:visibility="gone"
-            app:backgroundTint="@null" />
-
-        <!-- Start/Stop Primary Action Button -->
-        <Button
-            android:id="@+id/btnPrimaryAction"
-            android:layout_width="0dp"
-            android:layout_weight="1.6"
-            android:layout_height="56dp"
-            android:background="@drawable/btn_gradient"
-            android:text="START"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05"
-            app:backgroundTint="@null" />
-
-        <!-- Restart Button (visible when running) -->
-        <Button
-            android:id="@+id/btnRestart"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="56dp"
-            android:background="@drawable/preset_chip"
-            android:text="RESTART"
-            android:textColor="@color/accent_blue"
-            android:textStyle="bold"
-            android:layout_marginStart="8dp"
-            android:visibility="gone"
-            app:backgroundTint="@null" />
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
