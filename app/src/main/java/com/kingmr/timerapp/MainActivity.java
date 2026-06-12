@@ -8,6 +8,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -28,32 +30,34 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.progressindicator.CircularProgressIndicator;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-public class MainActivity extends AppCompatActivity implements TimerService.TimerListener {
+public class MainActivity extends AppCompatActivity implements TimerService.MultiTimerListener {
     private static final int PERMISSION_REQUEST_CODE = 123;
     private static final int OVERLAY_PERMISSION_REQ_CODE = 124;
     private static final int AUDIO_PICKER_REQ_CODE = 125;
 
-    private TextView mTextTimeLeft;
-    private TextView mTextTimerState;
-    private CircularProgressIndicator mTimerProgress;
-    
+    private EditText mEditTimerLabel;
     private EditText mEditHours;
     private EditText mEditMinutes;
     private EditText mEditSeconds;
-    
-    private LinearLayout mPickerContainer;
+
     private LinearLayout mPresetsContainer;
-    private LinearLayout mSoundContainer;
-    
-    private Button mBtnPrimaryAction;
-    private Button mBtnReset;
-    private Button mBtnRestart;
-    
+    private EditText mEditPresetName;
+    private Button mBtnSavePreset;
+    private Button mBtnCreateTimer;
+
     private TextView mTextSoundName;
     private Button mBtnSelectSound;
+
+    private RecyclerView mRecyclerTimers;
+    private TimerAdapter mAdapter;
 
     private TimerService mService;
     private boolean mBound = false;
@@ -64,9 +68,11 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             TimerService.LocalBinder binder = (TimerService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
+            
             TimerService.setListener(MainActivity.this);
-            mService.setAppInForeground(true); // Tell service app is active in foreground
-            updateUiState();
+            mService.setAppInForeground(true);
+
+            setupRecyclerView();
         }
 
         @Override
@@ -81,52 +87,49 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Request notification permissions for Android 13+
+        // Permissions
         requestNotificationPermission();
 
-        // Initialize UI Elements
-        mTextTimeLeft = findViewById(R.id.textTimeLeft);
-        mTextTimerState = findViewById(R.id.textTimerState);
-        mTimerProgress = findViewById(R.id.timerProgress);
-        
+        // Inputs
+        mEditTimerLabel = findViewById(R.id.editTimerLabel);
         mEditHours = findViewById(R.id.editHours);
         mEditMinutes = findViewById(R.id.editMinutes);
         mEditSeconds = findViewById(R.id.editSeconds);
-        
-        mPickerContainer = findViewById(R.id.pickerContainer);
+
         mPresetsContainer = findViewById(R.id.presetsContainer);
-        mSoundContainer = findViewById(R.id.soundContainer);
-        
-        mBtnPrimaryAction = findViewById(R.id.btnPrimaryAction);
-        mBtnReset = findViewById(R.id.btnReset);
-        mBtnRestart = findViewById(R.id.btnRestart);
-        
+        mEditPresetName = findViewById(R.id.editPresetName);
+        mBtnSavePreset = findViewById(R.id.btnSavePreset);
+        mBtnCreateTimer = findViewById(R.id.btnCreateTimer);
+
         mTextSoundName = findViewById(R.id.textSoundName);
         mBtnSelectSound = findViewById(R.id.btnSelectSound);
 
-        // Add formatter logic to input fields (auto pad with 0s)
+        mRecyclerTimers = findViewById(R.id.recyclerTimers);
+        mRecyclerTimers.setLayoutManager(new LinearLayoutManager(this));
+
+        // Format paddings
         setupInputPadding(mEditHours);
         setupInputPadding(mEditMinutes);
         setupInputPadding(mEditSeconds);
 
-        // Setup actions
-        mBtnPrimaryAction.setOnClickListener(v -> handlePrimaryAction());
-        mBtnReset.setOnClickListener(v -> handleReset());
-        mBtnRestart.setOnClickListener(v -> handleRestart());
-
+        // Actions
+        mBtnCreateTimer.setOnClickListener(v -> handleCreateTimer());
+        mBtnSavePreset.setOnClickListener(v -> handleSavePreset());
         mBtnSelectSound.setOnClickListener(v -> openAudioPicker());
 
-        // Setup presets
-        setupPresets();
+        // Setup Themes click handlers
+        setupThemeSelectors();
 
-        // Display current alarm sound name
+        // Setup Presets UI
+        renderPresets();
+
+        // Audio Name display
         loadSavedSoundName();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        // Bind to TimerService
         Intent intent = new Intent(this, TimerService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
@@ -137,13 +140,16 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         if (mBound && mService != null) {
             mService.setAppInForeground(true);
         }
+        if (mAdapter != null) {
+            mAdapter.notifyDataSetChanged();
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         if (mBound && mService != null) {
-            mService.setAppInForeground(false); // Service handles showing overlay if timer is active
+            mService.setAppInForeground(false);
         }
     }
 
@@ -158,143 +164,146 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
     }
 
     @Override
-    public void onTick(long millisLeft, boolean isFinished) {
+    public void onTimersUpdated() {
         runOnUiThread(() -> {
-            updateCountdownText(millisLeft);
-            if (mBound && mService != null) {
-                long initial = mService.getInitialTimeInMillis();
-                if (initial > 0) {
-                    int progress = (int) (millisLeft * 100 / initial);
-                    mTimerProgress.setProgress(progress);
-                }
-            }
-            if (isFinished) {
-                mTextTimerState.setText("FINISHED!");
+            if (mAdapter != null) {
+                mAdapter.notifyDataSetChanged();
             }
         });
     }
 
-    @Override
-    public void onStatusChanged(boolean running) {
-        runOnUiThread(this::updateUiState);
+    private void setupRecyclerView() {
+        if (mService != null) {
+            mAdapter = new TimerAdapter(this, mService.getTimers(), mService);
+            mRecyclerTimers.setAdapter(mAdapter);
+        }
     }
 
-    private void updateUiState() {
+    private void handleCreateTimer() {
         if (!mBound || mService == null) return;
 
-        boolean running = mService.isTimerRunning();
-        long timeLeft = mService.getTimeLeftInMillis();
-        long initial = mService.getInitialTimeInMillis();
+        // Check overlay permission
+        if (!checkOverlayPermission()) {
+            requestOverlayPermission();
+            return;
+        }
 
-        if (running || timeLeft > 0) {
-            // Timer active or paused
-            mPickerContainer.setVisibility(View.GONE);
-            mPresetsContainer.setVisibility(View.GONE);
-            mSoundContainer.setVisibility(View.GONE);
-            
-            mBtnReset.setVisibility(View.VISIBLE);
-            mBtnRestart.setVisibility(View.VISIBLE);
-            mBtnPrimaryAction.setText("STOP");
-            
-            mTextTimerState.setText(running ? "RUNNING" : "PAUSED");
-            
-            if (running) {
-                startPulseAnimation();
-            } else {
-                stopPulseAnimation();
-            }
-            
-            updateCountdownText(timeLeft);
-            
-            if (initial > 0) {
-                int progress = (int) (timeLeft * 100 / initial);
-                mTimerProgress.setProgress(progress);
-            }
-        } else {
-            // Timer stopped / completed
-            mPickerContainer.setVisibility(View.VISIBLE);
-            mPresetsContainer.setVisibility(View.VISIBLE);
-            mSoundContainer.setVisibility(View.VISIBLE);
-            
-            mBtnReset.setVisibility(View.GONE);
-            mBtnRestart.setVisibility(View.GONE);
-            mBtnPrimaryAction.setText("START");
-            
-            mTextTimerState.setText("READY");
-            
-            stopPulseAnimation();
-            
-            // Read from inputs to show initial display
-            long currentSelected = getDurationFromInputs();
-            updateCountdownText(currentSelected);
-            mTimerProgress.setProgress(100);
+        long duration = getDurationFromInputs();
+        if (duration <= 0) {
+            Toast.makeText(this, "Please select a duration greater than 0", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String label = mEditTimerLabel.getText().toString().trim();
+        if (label.isEmpty()) {
+            label = "Timer";
+        }
+
+        mService.addTimer(duration, label);
+        mEditTimerLabel.setText("");
+        Toast.makeText(this, "Timer added: " + label, Toast.LENGTH_SHORT).show();
+    }
+
+    // --- Themes ---
+    private void setupThemeSelectors() {
+        findViewById(R.id.themeSunset).setOnClickListener(v -> saveTheme("sunset"));
+        findViewById(R.id.themeCyberpunk).setOnClickListener(v -> saveTheme("cyberpunk"));
+        findViewById(R.id.themeOcean).setOnClickListener(v -> saveTheme("ocean"));
+        findViewById(R.id.themeForest).setOnClickListener(v -> saveTheme("forest"));
+    }
+
+    private void saveTheme(String theme) {
+        SharedPreferences.Editor editor = getSharedPreferences("TimerPrefs", MODE_PRIVATE).edit();
+        editor.putString("selected_theme", theme);
+        editor.apply();
+        Toast.makeText(this, "Theme changed: " + theme, Toast.LENGTH_SHORT).show();
+        
+        if (mAdapter != null) {
+            mAdapter.notifyDataSetChanged(); // Updates indicator colors instantly!
         }
     }
 
-    private void handlePrimaryAction() {
-        if (!mBound || mService == null) return;
+    // --- Custom Presets ---
+    private void handleSavePreset() {
+        String name = mEditPresetName.getText().toString().trim();
+        if (name.isEmpty()) {
+            Toast.makeText(this, "Enter preset name", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        long duration = getDurationFromInputs();
+        if (duration <= 0) {
+            Toast.makeText(this, "Select a valid duration first", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        if (mService.isTimerRunning() || mService.getTimeLeftInMillis() > 0) {
-            // It is running or active. Primary action button represents "STOP"
-            mService.resetTimer();
-            updateUiState();
-        } else {
-            // Check display over other apps permission
-            if (!checkOverlayPermission()) {
-                requestOverlayPermission();
-                return;
-            }
+        SharedPreferences prefs = getSharedPreferences("TimerPrefs", MODE_PRIVATE);
+        Set<String> set = prefs.getStringSet("custom_presets_set", new HashSet<>());
+        Set<String> newSet = new HashSet<>(set);
+        newSet.add(name + ":" + duration);
 
-            long duration = getDurationFromInputs();
-            if (duration <= 0) {
-                Toast.makeText(this, "Please select a duration greater than 0", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putStringSet("custom_presets_set", newSet);
+        editor.apply();
 
-            Intent serviceIntent = new Intent(this, TimerService.class);
-            serviceIntent.putExtra("duration", duration);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent);
-            } else {
-                startService(serviceIntent);
+        mEditPresetName.setText("");
+        renderPresets();
+        Toast.makeText(this, "Preset saved: " + name, Toast.LENGTH_SHORT).show();
+    }
+
+    private void renderPresets() {
+        mPresetsContainer.removeAllViews();
+
+        // Standard presets
+        addPresetChip("1 Min", 60000);
+        addPresetChip("5 Min", 300000);
+        addPresetChip("10 Min", 600000);
+        addPresetChip("30 Min", 1800000);
+        addPresetChip("1 Hour", 3600000);
+
+        // Load custom presets
+        SharedPreferences prefs = getSharedPreferences("TimerPrefs", MODE_PRIVATE);
+        Set<String> set = prefs.getStringSet("custom_presets_set", null);
+        if (set != null) {
+            for (String item : set) {
+                String[] split = item.split(":");
+                if (split.length == 2) {
+                    try {
+                        String name = split[0];
+                        long duration = Long.parseLong(split[1]);
+                        addPresetChip(name, duration);
+                    } catch (Exception ignored) {}
+                }
             }
-            // Temporarily update UI while binding matches
-            mTextTimerState.setText("RUNNING");
-            mPickerContainer.setVisibility(View.GONE);
-            mPresetsContainer.setVisibility(View.GONE);
-            mSoundContainer.setVisibility(View.GONE);
-            mBtnReset.setVisibility(View.VISIBLE);
-            mBtnRestart.setVisibility(View.VISIBLE);
-            mBtnPrimaryAction.setText("STOP");
         }
     }
 
-    private void handleReset() {
-        if (mBound && mService != null) {
-            mService.resetTimer();
-            updateUiState();
-        }
-    }
+    private void addPresetChip(String name, long duration) {
+        View view = LayoutInflater.from(this).inflate(android.R.layout.simple_list_item_1, mPresetsContainer, false);
+        TextView textView = view.findViewById(android.R.id.text1);
+        textView.setText(name);
+        textView.setTextColor(Color.WHITE);
+        textView.setTextSize(12);
+        textView.setPadding(32, 16, 32, 16);
+        textView.setBackgroundResource(R.drawable.preset_chip);
 
-    private void handleRestart() {
-        if (mBound && mService != null) {
-            mService.restartTimer();
-            updateUiState();
-        }
-    }
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, 0, 16, 0);
+        textView.setLayoutParams(params);
 
-    private void updateCountdownText(long millis) {
-        int seconds = (int) (millis / 1000) % 60 ;
-        int minutes = (int) ((millis / (1000*60)) % 60);
-        int hours   = (int) ((millis / (1000*60*60)) % 24);
+        textView.setOnClickListener(v -> {
+            int h = (int) (duration / 3600000);
+            int m = (int) ((duration % 3600000) / 60000);
+            int s = (int) ((duration % 60000) / 1000);
+            mEditHours.setText(String.format("%02d", h));
+            mEditMinutes.setText(String.format("%02d", m));
+            mEditSeconds.setText(String.format("%02d", s));
+            mEditTimerLabel.setText(name);
+        });
 
-        String timeLeft;
-        if (hours > 0) {
-            timeLeft = String.format("%02d:%02d:%02d", hours, minutes, seconds);
-        } else {
-            timeLeft = String.format("%02d:%02d", minutes, seconds);
-        }
-        mTextTimeLeft.setText(timeLeft);
+        mPresetsContainer.addView(textView);
     }
 
     private long getDurationFromInputs() {
@@ -319,40 +328,6 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
                 }
             }
         });
-        
-        editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (!mBound || !mService.isTimerRunning()) {
-                    long duration = getDurationFromInputs();
-                    updateCountdownText(duration);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-    }
-
-    private void setupPresets() {
-        findViewById(R.id.btnPreset1).setOnClickListener(v -> setPreset(0, 1, 0));
-        findViewById(R.id.btnPreset5).setOnClickListener(v -> setPreset(0, 5, 0));
-        findViewById(R.id.btnPreset10).setOnClickListener(v -> setPreset(0, 10, 0));
-        findViewById(R.id.btnPreset15).setOnClickListener(v -> setPreset(0, 15, 0));
-        findViewById(R.id.btnPreset30).setOnClickListener(v -> setPreset(0, 30, 0));
-        findViewById(R.id.btnPreset60).setOnClickListener(v -> setPreset(1, 0, 0));
-    }
-
-    private void setPreset(int h, int m, int s) {
-        mEditHours.setText(String.format("%02d", h));
-        mEditMinutes.setText(String.format("%02d", m));
-        mEditSeconds.setText(String.format("%02d", s));
-        long duration = (h * 3600L + m * 60L + s) * 1000L;
-        updateCountdownText(duration);
-        mTimerProgress.setProgress(100);
     }
 
     // --- Audio Sound Picker ---
@@ -369,14 +344,13 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         if (requestCode == AUDIO_PICKER_REQ_CODE && resultCode == RESULT_OK && data != null) {
             Uri audioUri = data.getData();
             if (audioUri != null) {
-                // Grant persistable permission so background service can read it later
                 try {
                     getContentResolver().takePersistableUriPermission(
                             audioUri,
                             Intent.FLAG_GRANT_READ_URI_PERMISSION
                     );
                 } catch (Exception e) {
-                    Toast.makeText(this, "Could not persist file permission. Sound may default when app is closed.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Could not persist permissions.", Toast.LENGTH_LONG).show();
                 }
 
                 String name = getFileName(audioUri);
@@ -393,7 +367,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             if (checkOverlayPermission()) {
                 Toast.makeText(this, "Permission granted! Start timer again.", Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Overlay permission is required to show widget in background.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Overlay permission is required to show widgets.", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -426,7 +400,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         return result;
     }
 
-    // --- Overlay permissions ---
+    // --- Overlay drawing permissions ---
     private boolean checkOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             return Settings.canDrawOverlays(this);
@@ -436,7 +410,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
 
     private void requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Toast.makeText(this, "Enable 'Display over other apps' to use floating widget", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Enable 'Display over other apps' to use floating widgets", Toast.LENGTH_LONG).show();
             Intent intent = new Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName())
@@ -469,29 +443,5 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
                 Toast.makeText(this, "Permission required to show timer in background", Toast.LENGTH_LONG).show();
             }
         }
-    }
-
-    // --- Pulse Animations ---
-    private android.view.animation.Animation mPulseAnimation;
-
-    private void startPulseAnimation() {
-        if (mPulseAnimation == null) {
-            mPulseAnimation = new android.view.animation.ScaleAnimation(
-                    1.0f, 1.05f, // scale from X to X
-                    1.0f, 1.05f, // scale from Y to Y
-                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
-                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
-            );
-            mPulseAnimation.setDuration(800);
-            mPulseAnimation.setRepeatMode(android.view.animation.Animation.REVERSE);
-            mPulseAnimation.setRepeatCount(android.view.animation.Animation.INFINITE);
-        }
-        if (mTextTimeLeft.getAnimation() == null) {
-            mTextTimeLeft.startAnimation(mPulseAnimation);
-        }
-    }
-
-    private void stopPulseAnimation() {
-        mTextTimeLeft.clearAnimation();
     }
 }
