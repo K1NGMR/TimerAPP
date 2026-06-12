@@ -240,9 +240,9 @@ public class TimerService extends Service {
         btnRestart.setOnClickListener(v -> restartTimer());
         btnStop.setOnClickListener(v -> resetTimer());
 
-        // Setup Drag handling
-        View dragHandle = mFloatingView.findViewById(R.id.dragHandle);
-        dragHandle.setOnTouchListener(new View.OnTouchListener() {
+        // Setup Drag handling on the entire root layout container
+        View floatingRoot = mFloatingView.findViewById(R.id.floatingRoot);
+        floatingRoot.setOnTouchListener(new View.OnTouchListener() {
             private int initialX;
             private int initialY;
             private float initialTouchX;
