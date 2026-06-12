@@ -206,11 +206,15 @@ public class TimerService extends Service {
     }
 
     public void stopAlarm() {
-        if (mRingtone != null && mRingtone.isPlaying()) {
-            mRingtone.stop();
-        }
-        if (mVibrator != null) {
-            mVibrator.cancel();
+        try {
+            if (mRingtone != null && mRingtone.isPlaying()) {
+                mRingtone.stop();
+            }
+            if (mVibrator != null) {
+                mVibrator.cancel();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error stopping alarm/vibration", e);
         }
     }
 
