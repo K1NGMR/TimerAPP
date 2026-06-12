@@ -197,6 +197,13 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             mBtnPrimaryAction.setText("STOP");
             
             mTextTimerState.setText(running ? "RUNNING" : "PAUSED");
+            
+            if (running) {
+                startPulseAnimation();
+            } else {
+                stopPulseAnimation();
+            }
+            
             updateCountdownText(timeLeft);
             
             if (initial > 0) {
@@ -214,6 +221,8 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             mBtnPrimaryAction.setText("START");
             
             mTextTimerState.setText("READY");
+            
+            stopPulseAnimation();
             
             // Read from inputs to show initial display
             long currentSelected = getDurationFromInputs();
@@ -460,5 +469,29 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
                 Toast.makeText(this, "Permission required to show timer in background", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    // --- Pulse Animations ---
+    private android.view.animation.Animation mPulseAnimation;
+
+    private void startPulseAnimation() {
+        if (mPulseAnimation == null) {
+            mPulseAnimation = new android.view.animation.ScaleAnimation(
+                    1.0f, 1.05f, // scale from X to X
+                    1.0f, 1.05f, // scale from Y to Y
+                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f,
+                    android.view.animation.Animation.RELATIVE_TO_SELF, 0.5f
+            );
+            mPulseAnimation.setDuration(800);
+            mPulseAnimation.setRepeatMode(android.view.animation.Animation.REVERSE);
+            mPulseAnimation.setRepeatCount(android.view.animation.Animation.INFINITE);
+        }
+        if (mTextTimeLeft.getAnimation() == null) {
+            mTextTimeLeft.startAnimation(mPulseAnimation);
+        }
+    }
+
+    private void stopPulseAnimation() {
+        mTextTimeLeft.clearAnimation();
     }
 }
