@@ -5,10 +5,15 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.OpenableColumns;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -19,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -27,6 +33,8 @@ import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 public class MainActivity extends AppCompatActivity implements TimerService.TimerListener {
     private static final int PERMISSION_REQUEST_CODE = 123;
+    private static final int OVERLAY_PERMISSION_REQ_CODE = 124;
+    private static final int AUDIO_PICKER_REQ_CODE = 125;
 
     private TextView mTextTimeLeft;
     private TextView mTextTimerState;
@@ -38,11 +46,15 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
     
     private LinearLayout mPickerContainer;
     private LinearLayout mPresetsContainer;
+    private LinearLayout mSoundContainer;
     
     private Button mBtnPrimaryAction;
     private Button mBtnReset;
     private Button mBtnRestart;
     
+    private TextView mTextSoundName;
+    private Button mBtnSelectSound;
+
     private TimerService mService;
     private boolean mBound = false;
 
@@ -53,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             mService = binder.getService();
             mBound = true;
             TimerService.setListener(MainActivity.this);
+            mService.setAppInForeground(true); // Tell service app is active in foreground
             updateUiState();
         }
 
@@ -82,10 +95,14 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         
         mPickerContainer = findViewById(R.id.pickerContainer);
         mPresetsContainer = findViewById(R.id.presetsContainer);
+        mSoundContainer = findViewById(R.id.soundContainer);
         
         mBtnPrimaryAction = findViewById(R.id.btnPrimaryAction);
         mBtnReset = findViewById(R.id.btnReset);
         mBtnRestart = findViewById(R.id.btnRestart);
+        
+        mTextSoundName = findViewById(R.id.textSoundName);
+        mBtnSelectSound = findViewById(R.id.btnSelectSound);
 
         // Add formatter logic to input fields (auto pad with 0s)
         setupInputPadding(mEditHours);
@@ -97,8 +114,13 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         mBtnReset.setOnClickListener(v -> handleReset());
         mBtnRestart.setOnClickListener(v -> handleRestart());
 
+        mBtnSelectSound.setOnClickListener(v -> openAudioPicker());
+
         // Setup presets
         setupPresets();
+
+        // Display current alarm sound name
+        loadSavedSoundName();
     }
 
     @Override
@@ -107,6 +129,22 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         // Bind to TimerService
         Intent intent = new Intent(this, TimerService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mBound && mService != null) {
+            mService.setAppInForeground(true);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mBound && mService != null) {
+            mService.setAppInForeground(false); // Service handles showing overlay if timer is active
+        }
     }
 
     @Override
@@ -152,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             // Timer active or paused
             mPickerContainer.setVisibility(View.GONE);
             mPresetsContainer.setVisibility(View.GONE);
+            mSoundContainer.setVisibility(View.GONE);
             
             mBtnReset.setVisibility(View.VISIBLE);
             mBtnRestart.setVisibility(View.VISIBLE);
@@ -168,6 +207,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             // Timer stopped / completed
             mPickerContainer.setVisibility(View.VISIBLE);
             mPresetsContainer.setVisibility(View.VISIBLE);
+            mSoundContainer.setVisibility(View.VISIBLE);
             
             mBtnReset.setVisibility(View.GONE);
             mBtnRestart.setVisibility(View.GONE);
@@ -190,7 +230,12 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             mService.resetTimer();
             updateUiState();
         } else {
-            // It is stopped. Primary action button represents "START"
+            // Check display over other apps permission
+            if (!checkOverlayPermission()) {
+                requestOverlayPermission();
+                return;
+            }
+
             long duration = getDurationFromInputs();
             if (duration <= 0) {
                 Toast.makeText(this, "Please select a duration greater than 0", Toast.LENGTH_SHORT).show();
@@ -208,6 +253,7 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
             mTextTimerState.setText("RUNNING");
             mPickerContainer.setVisibility(View.GONE);
             mPresetsContainer.setVisibility(View.GONE);
+            mSoundContainer.setVisibility(View.GONE);
             mBtnReset.setVisibility(View.VISIBLE);
             mBtnRestart.setVisibility(View.VISIBLE);
             mBtnPrimaryAction.setText("STOP");
@@ -271,7 +317,6 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Instantly update layout countdown preview text when user changes digits
                 if (!mBound || !mService.isTimerRunning()) {
                     long duration = getDurationFromInputs();
                     updateCountdownText(duration);
@@ -301,6 +346,97 @@ public class MainActivity extends AppCompatActivity implements TimerService.Time
         mTimerProgress.setProgress(100);
     }
 
+    // --- Audio Sound Picker ---
+    private void openAudioPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("audio/*");
+        startActivityForResult(intent, AUDIO_PICKER_REQ_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == AUDIO_PICKER_REQ_CODE && resultCode == RESULT_OK && data != null) {
+            Uri audioUri = data.getData();
+            if (audioUri != null) {
+                // Grant persistable permission so background service can read it later
+                try {
+                    getContentResolver().takePersistableUriPermission(
+                            audioUri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
+                } catch (Exception e) {
+                    Toast.makeText(this, "Could not persist file permission. Sound may default when app is closed.", Toast.LENGTH_LONG).show();
+                }
+
+                String name = getFileName(audioUri);
+                
+                SharedPreferences.Editor editor = getSharedPreferences("TimerPrefs", MODE_PRIVATE).edit();
+                editor.putString("custom_sound", audioUri.toString());
+                editor.putString("custom_sound_name", name);
+                editor.apply();
+                
+                mTextSoundName.setText(name);
+                Toast.makeText(this, "Selected: " + name, Toast.LENGTH_SHORT).show();
+            }
+        } else if (requestCode == OVERLAY_PERMISSION_REQ_CODE) {
+            if (checkOverlayPermission()) {
+                Toast.makeText(this, "Permission granted! Start timer again.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Overlay permission is required to show widget in background.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void loadSavedSoundName() {
+        SharedPreferences prefs = getSharedPreferences("TimerPrefs", MODE_PRIVATE);
+        String name = prefs.getString("custom_sound_name", "Default Ringtone");
+        mTextSoundName.setText(name);
+    }
+
+    private String getFileName(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (idx != -1) {
+                        result = cursor.getString(idx);
+                    }
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result.lastIndexOf('/');
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+        return result;
+    }
+
+    // --- Overlay permissions ---
+    private boolean checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return Settings.canDrawOverlays(this);
+        }
+        return true;
+    }
+
+    private void requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Toast.makeText(this, "Enable 'Display over other apps' to use floating widget", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())
+            );
+            startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE);
+        }
+    }
+
+    // --- Notification permissions ---
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
